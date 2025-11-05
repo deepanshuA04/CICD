@@ -38,7 +38,7 @@ pipeline {
             steps {
                 bat '''
                 echo Deploying application to Kubernetes cluster...
-                kubectl apply -f deployment.yaml
+                kubectl apply -f deployment.yaml --validate=false
                 kubectl rollout status deployment/webapp-deployment
                 '''
             }
