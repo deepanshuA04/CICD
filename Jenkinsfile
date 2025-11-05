@@ -2,14 +2,15 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_CREDENTIALS = credentials('dockerhub-login')
-        IMAGE_NAME = 'your-dockerhub-username/webapp'
+        // Updated credential ID and DockerHub username
+        DOCKERHUB_CREDENTIALS = credentials('a770410e-e187-4471-ac23-fcff1d67da43')
+        IMAGE_NAME = 'deepanshua04/webapp'
     }
 
     stages {
         stage('Clone Repository') {
             steps {
-                git 'https://github.com/your-username/CICD2.git'
+                git 'https://github.com/deepanshuA04/CICD.git'
             }
         }
 
