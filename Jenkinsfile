@@ -1,75 +1,55 @@
 pipeline {
-  agent any
+    agent any
 
-  environment {
-    IMAGE_NAME = "demo-app"
-    IMAGE_TAG = "latest"
-    DOCKER_CONTAINER_NAME = "demo-app-container"
-    HOST_PORT = "8081"
-    CONTAINER_PORT = "80" 
-  }
-
-  stages {
-    stage('Checkout') {
-      steps {
-        checkout scm
-      }
+    environment {
+        DOCKERHUB_CREDENTIALS = credentials('dockerhub-login')
+        IMAGE_NAME = 'your-dockerhub-username/webapp'
     }
 
-    stage('Build Docker Image') {
-      steps {
-        script {
-
-          sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
+    stages {
+        stage('Clone Repository') {
+            steps {
+                git 'https://github.com/your-username/CICD2.git'
+            }
         }
-      }
-    }
 
-    stage('Stop & Remove Existing Container') {
-      steps {
-        script {
-
-          sh """
-            if [ \$(docker ps -a -q -f name=${DOCKER_CONTAINER_NAME} | wc -l) -gt 0 ]; then
-              docker rm -f ${DOCKER_CONTAINER_NAME} || true
-            fi
-          """
+        stage('Build Docker Image') {
+            steps {
+                bat '''
+                echo Building Docker image...
+                docker build -t %IMAGE_NAME%:latest .
+                '''
+            }
         }
-      }
-    }
 
-    stage('Run Container') {
-      steps {
-        script {
-
-          sh """
-            docker run -d --name ${DOCKER_CONTAINER_NAME} -p ${HOST_PORT}:${CONTAINER_PORT} ${IMAGE_NAME}:${IMAGE_TAG}
-          """
+        stage('Push Docker Image to DockerHub') {
+            steps {
+                bat '''
+                echo Logging in to DockerHub...
+                echo %DOCKERHUB_CREDENTIALS_PSW% | docker login -u %DOCKERHUB_CREDENTIALS_USR% --password-stdin
+                echo Pushing image to DockerHub...
+                docker push %IMAGE_NAME%:latest
+                '''
+            }
         }
-      }
-    }
 
-    stage('Smoke Test') {
-      steps {
-        script {
-
-          sh """
-            sleep 2
-            echo '=== site content ==='
-            curl -sS http://localhost:${HOST_PORT} || true
-            echo '===================='
-          """
+        stage('Deploy to Kubernetes') {
+            steps {
+                bat '''
+                echo Deploying application to Kubernetes cluster...
+                kubectl apply -f deployment.yaml
+                kubectl rollout status deployment/webapp-deployment
+                '''
+            }
         }
-      }
     }
-  }
 
-  post {
-    success {
-      echo "Deployment finished. Open http://<JENKINS_HOST>:${HOST_PORT}"
+    post {
+        success {
+            echo "✅ Pipeline completed successfully! Application deployed."
+        }
+        failure {
+            echo "❌ Pipeline failed. Please check the console output for details."
+        }
     }
-    failure {
-      echo "Pipeline failed — check console output for errors."
-    }
-  }
 }
